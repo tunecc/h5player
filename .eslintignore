@@ -1,9 +1,0 @@
-**/node_modules
-**/dist
-**/demo
-**/static
-**/.cache
-*.md
-*.woff
-*.ttf
-*.tpl
