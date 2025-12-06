@@ -10,7 +10,7 @@
 // @source       https://github.com/tunecc/h5player
 // @downloadURL  https://raw.githubusercontent.com/tunecc/h5player/master/h5player.user.js
 // @updateURL    https://raw.githubusercontent.com/tunecc/h5player/master/h5player.user.js
-// @icon         https://raw.githubusercontent.com/tunecc/h5player/master/logo.jpg
+// @icon         https://raw.githubusercontent.com/tunecc/h5player/master/logo.png
 // @match        *://*/*
 // @grant        none
 // @run-at       document-end
