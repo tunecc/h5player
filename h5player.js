@@ -2,7 +2,7 @@
 // @name         精简HTML5播放器增强脚本
 // @name:en      Simple HTML5 Video Player Enhancer
 // @namespace    https://github.com/tunecc/h5player
-// @version      2.35
+// @version      2.36
 // @description  极简 HTML5 视频增强脚本，支持倍速、快进快退、智能全屏（保留控制栏）。
 // @description:en Minimalist HTML5 video enhancer. Supports speed control, fast forward/rewind, and smart fullscreen (with controls).
 // @author       Tune
@@ -25,16 +25,16 @@
     const MAX_SPEED = 16.0;
     const MIN_SPEED = 0.1;
     const DEFAULT_RESTORE_SPEED = 1.5;
-    const CLICK_THRESHOLD = 500; 
-    const SEEK_STEP_FORWARD = 5; 
-    const SEEK_STEP_REWIND = 3;  
+    const CLICK_THRESHOLD = 500;
+    const SEEK_STEP_FORWARD = 5;
+    const SEEK_STEP_REWIND = 3;
     // ----------------
 
-    const plusInfo = {}; 
-    let lastPlaybackRate = DEFAULT_RESTORE_SPEED; 
-    let seekAccumulator = 0; 
+    const plusInfo = {};
+    let lastPlaybackRate = DEFAULT_RESTORE_SPEED;
+    let seekAccumulator = 0;
     let seekResetTimer = null;
-    
+
     // 【核心变量】用于缓存当前正在活跃的视频元素
     let currentVideo = null;
 
@@ -72,16 +72,16 @@
         }
 
         const rect = targetVideo.getBoundingClientRect();
-        const top = Math.max(0, rect.top); 
+        const top = Math.max(0, rect.top);
         const left = Math.max(0, rect.left);
 
         tipsDiv.style.top = `${top}px`;
         tipsDiv.style.left = `${left}px`;
         tipsDiv.innerText = text;
         tipsDiv.style.display = 'block';
-        
+
         requestAnimationFrame(() => { tipsDiv.style.opacity = '1'; });
-        
+
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
             tipsDiv.style.opacity = '0';
@@ -90,51 +90,33 @@
     }
 
     /**
-     * 【核心升级】视频捕获器
-     * 模仿原版 mediaCore 逻辑：监听 document 上的媒体事件
-     * 只要有视频发出信号（播放、暂停、加载），立刻将其捕获
+     * 视频捕获器
      */
     function captureMedia(e) {
         const target = e.target;
-        // 只捕获 VIDEO 标签，且必须是有效的 DOM 元素
         if (target && target.tagName === 'VIDEO') {
-            // 更新当前活跃的视频
             currentVideo = target;
         }
     }
 
-    // 在捕获阶段监听事件 (useCapture = true)，确保能抓到 ShadowDOM 里的事件
-    // 这些事件触发频率低，不会占用资源
     document.addEventListener('play', captureMedia, true);
     document.addEventListener('playing', captureMedia, true);
     document.addEventListener('pause', captureMedia, true);
-    document.addEventListener('timeupdate', captureMedia, true); // timeupdate 保证了哪怕视频在播放中也能被持续锁定
+    document.addEventListener('timeupdate', captureMedia, true);
     document.addEventListener('canplay', captureMedia, true);
 
-    /**
-     * 获取目标视频
-     * 逻辑：
-     * 1. 优先返回【事件捕获】到的、正在活跃的 currentVideo (最准、最快)
-     * 2. 如果没有(比如视频暂停了很久)，再回退到 querySelector 查找 (兜底)
-     */
     function getTargetPlayer() {
-        // 1. 检查缓存的视频是否还存在于页面上
         if (currentVideo && currentVideo.isConnected) {
             return currentVideo;
         }
 
-        // 2. 兜底查找：如果缓存失效，才去遍历 DOM
-        // 删除了 querySelectorAll('*')，只查 video，性能大幅提升
         const medias = Array.from(document.querySelectorAll('video'));
-        
-        // 过滤可见视频
         const visibleMedias = medias.filter(m => {
             const rect = m.getBoundingClientRect();
             return rect.width > 10 && rect.height > 10;
         });
 
         if (visibleMedias.length > 0) {
-            // 更新缓存
             currentVideo = visibleMedias[visibleMedias.length - 1];
             return currentVideo;
         }
@@ -155,7 +137,7 @@
     function toggleResetSpeed() {
         const player = getTargetPlayer();
         if (!player) return false;
-        
+
         if (player.playbackRate === 1.0) {
             setSpeed(lastPlaybackRate);
         } else {
@@ -246,7 +228,7 @@
 
     function toggleFullScreen() {
         const player = getTargetPlayer();
-        if (!player) return false; 
+        if (!player) return false;
 
         if (tccFullScreen(player)) return true;
 
@@ -266,12 +248,16 @@
     function isInteractiveElement(element) {
         if (!element) return false;
         const tag = element.tagName ? element.tagName.toUpperCase() : '';
-        if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag)) return true;
+
+        // 移除了 'BUTTON'
+        // 这样当你点击播放器控制栏（它们通常是 BUTTON）时，脚本不会停止工作
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return true;
+
         if (element.isContentEditable || element.getAttribute('contenteditable') === 'true') return true;
-        
+
         const className = (element.className || '').toString().toLowerCase();
         if (className.includes('bpx-player-dm-input') || className.includes('reply-box-textarea')) return true;
-        
+
         return false;
     }
 
@@ -280,15 +266,13 @@
         const realTarget = path.length > 0 ? path[0] : e.target;
         const activeEl = document.activeElement;
 
+        // 使用优化后的防误触检查
         if (isInteractiveElement(realTarget) || isInteractiveElement(activeEl)) {
             return;
         }
-        
+
         if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-        // 按键时，不再疯狂遍历 DOM，而是直接拿缓存的 currentVideo
-        // 只有缓存失效时才会进行简单的 DOM 查询
-        
         const key = e.key.toLowerCase();
         let handled = false;
 
@@ -303,9 +287,9 @@
             case 'c': handled = changeSpeed(STEP_XC);  break;
 
             case 'enter': handled = toggleFullScreen(); break;
-            
-            case 'arrowright': handled = changeTime(SEEK_STEP_FORWARD); break; 
-            case 'arrowleft': handled = changeTime(-SEEK_STEP_REWIND); break; 
+
+            case 'arrowright': handled = changeTime(SEEK_STEP_FORWARD); break;
+            case 'arrowleft': handled = changeTime(-SEEK_STEP_REWIND); break;
 
             default: handled = false;
         }
