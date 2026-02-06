@@ -1,3 +1,7 @@
+# 篡改后有时候总是崩溃，注入不了脚本，需要重启浏览器。
+# 所有我所以我开发了一个插件，免得体验太割裂了。
+# https://github.com/tunecc/VidBoost
+
 # Simple H5 Player Enhanced Script (精简版 HTML5 视频增强脚本)
 
 > **极简、极速、无感介入。**
